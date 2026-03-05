@@ -47,6 +47,80 @@ output = model.transcribe(audio=[audio_np])  # float32, 16kHz, mono
 text = output[0].text
 ```
 
+## Installation on Jetson Thor
+
+Parakeet runs as a RealtimeVoiceChat instance on port **8004**. The venv is cloned from the base project to preserve native Jetson libs.
+
+```bash
+# 1. Copy the base RealtimeVoiceChat project
+cp -r ~/workspace/realtimevoicechat ~/workspace/realtimevoicechat-parakeet
+
+# 2. Copy the working venv (do NOT create fresh — native libs will be missing)
+cp -a ~/workspace/realtimevoicechat/venv ~/workspace/realtimevoicechat-parakeet/venv
+
+# 3. Fix shebangs (CRITICAL — without this, pip installs to the WRONG venv)
+grep -rl "realtimevoicechat/venv/bin/python" ~/workspace/realtimevoicechat-parakeet/venv/bin/ | \
+  xargs -I{} sed -i "1s|realtimevoicechat/venv|realtimevoicechat-parakeet/venv|" {}
+
+# 4. Verify shebangs are correct
+head -1 ~/workspace/realtimevoicechat-parakeet/venv/bin/pip
+# Should show: #!/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin/python3
+
+# 5. Install NeMo (Parakeet's runtime)
+~/workspace/realtimevoicechat-parakeet/venv/bin/pip install nemo-toolkit[asr]
+
+# 6. Verify it installed in the RIGHT venv
+~/workspace/realtimevoicechat-parakeet/venv/bin/pip show nemo-toolkit | grep Location
+# Must show: /home/bujosa/workspace/realtimevoicechat-parakeet/venv/lib/...
+
+# 7. Fix cuBLAS symlinks (NeMo pulls nvidia-cublas which breaks JetPack)
+VENV_NVIDIA=~/workspace/realtimevoicechat-parakeet/venv/lib/python3.12/site-packages/nvidia
+SYSTEM_CUBLAS=/usr/local/cuda/lib64
+ln -sf $SYSTEM_CUBLAS/libcublas.so.13 $VENV_NVIDIA/cublas/lib/libcublas.so.13
+ln -sf $SYSTEM_CUBLAS/libcublasLt.so.13 $VENV_NVIDIA/cublas/lib/libcublasLt.so.13
+
+# 8. Place adapter files in code/
+# Copy parakeet_adapter/ directory into ~/workspace/realtimevoicechat-parakeet/code/
+
+# 9. Edit server.py — change port to 8004
+sed -i 's/port=8000/port=8004/' ~/workspace/realtimevoicechat-parakeet/code/server.py
+
+# 10. Edit transcribe.py — add USE_PARAKEET conditional import at the top (after existing imports)
+# Add:
+#   USE_PARAKEET = os.environ.get("USE_PARAKEET", "").strip() == "1"
+#   if USE_PARAKEET:
+#       from parakeet_adapter import AudioToTextRecorderParakeet as AudioToTextRecorder
+#       AudioToTextRecorderClient = AudioToTextRecorder
+
+# 11. Create systemd service
+sudo tee /etc/systemd/system/parakeet-voice.service << 'EOF'
+[Unit]
+Description=Parakeet Voice Chat (port 8004)
+After=network.target
+
+[Service]
+Type=simple
+User=bujosa
+WorkingDirectory=/home/bujosa/workspace/realtimevoicechat-parakeet/code
+Environment=PATH=/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin:/usr/local/bin:/usr/bin
+Environment=USE_PARAKEET=1
+ExecStart=/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin/python3 server.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now parakeet-voice
+
+# 12. Verify
+sudo journalctl -u parakeet-voice -f
+# Wait for "Uvicorn running on http://0.0.0.0:8004"
+# Model loads in ~78 seconds
+```
+
 ## Verdict
 
 Best speed/accuracy/VRAM ratio. Recommended as the default STT for real-time voice applications.

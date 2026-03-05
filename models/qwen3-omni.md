@@ -86,6 +86,68 @@ text_ids, audio = model.generate(
 )
 ```
 
+## Installation on Jetson Thor
+
+Qwen3-Omni does **NOT** use RealtimeVoiceChat. It has its own standalone FastAPI server on port **8006** because the WebSocket protocol is incompatible.
+
+```bash
+# 1. Create project directory
+mkdir -p ~/workspace/qwen3-omni-voice/code
+
+# 2. Create venv (can be fresh — Qwen3-Omni doesn't need NeMo or RealtimeSTT)
+python3 -m venv ~/workspace/qwen3-omni-voice/venv
+
+# 3. Install dependencies
+~/workspace/qwen3-omni-voice/venv/bin/pip install \
+  torch --index-url https://pypi.jetson-ai-lab.io/sbsa/cu130
+
+~/workspace/qwen3-omni-voice/venv/bin/pip install \
+  transformers accelerate soundfile numpy fastapi uvicorn websockets qwen-omni-utils
+
+# 4. Place server.py in code/
+# The server is a standalone FastAPI app with WebSocket at /ws
+# (see the Configuration section above for the model loading code)
+
+# 5. Pre-download the model (~52 GB, takes ~31 minutes)
+~/workspace/qwen3-omni-voice/venv/bin/python3 -c "
+from transformers import Qwen3OmniMoeForConditionalGeneration, Qwen3OmniMoeProcessor
+Qwen3OmniMoeForConditionalGeneration.from_pretrained('Qwen/Qwen3-Omni-30B-A3B-Instruct', dtype='auto', device_map='auto', attn_implementation='sdpa')
+Qwen3OmniMoeProcessor.from_pretrained('Qwen/Qwen3-Omni-30B-A3B-Instruct')
+print('Download complete')
+"
+
+# 6. Create systemd service
+sudo tee /etc/systemd/system/qwen3omni-voice.service << 'EOF'
+[Unit]
+Description=Qwen3-Omni Voice Chat (port 8006)
+After=network.target
+
+[Service]
+Type=simple
+User=bujosa
+WorkingDirectory=/home/bujosa/workspace/qwen3-omni-voice/code
+Environment=PATH=/home/bujosa/workspace/qwen3-omni-voice/venv/bin:/usr/local/bin:/usr/bin
+ExecStart=/home/bujosa/workspace/qwen3-omni-voice/venv/bin/python3 server.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl enable --now qwen3omni-voice
+
+# 7. Verify
+sudo journalctl -u qwen3omni-voice -f
+# Wait for "Qwen3-Omni loaded in Xs" then "Uvicorn running on http://0.0.0.0:8006"
+# Model loads in ~26 seconds (memory-mapped from cache)
+# First load (uncached) takes ~31 minutes for download
+
+# WARNING: Qwen3-Omni uses ~70 GB RAM in BF16. You may need to stop other services:
+# sudo systemctl stop whisper-small canary-voice
+```
+
 ## Verdict
 
 The future of voice assistants. A single model that listens, thinks, and speaks. It fits on Thor in BF16 but consumes a lot of RAM. Ideal for a dedicated assistant where quality matters more than running multiple services in parallel. With AWQ-8bit it would be more practical for daily use.
