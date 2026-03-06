@@ -28,7 +28,7 @@ models/
   qwen3-tts.md        # Qwen3-TTS 0.6B and 1.7B
   qwen3-omni.md       # Qwen3-Omni 30B-A3B
 deployment/
-  thor-services.md    # Active services on Thor
+  thor-services.md    # Active services on Jetson Thor
   adapters.md         # STT adapter pattern
   venv-issues.md      # Common venv issues on Jetson
 ```

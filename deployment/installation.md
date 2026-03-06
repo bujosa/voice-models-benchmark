@@ -1,12 +1,12 @@
 # Complete Installation Guide — Jetson Thor
 
-Step-by-step commands for deploying all three voice models on Jetson Thor (10.0.0.11). These commands are battle-tested from the actual deployment sessions.
+Step-by-step commands for deploying all three voice models on Jetson Thor. These commands are battle-tested from actual deployment sessions.
 
 ## Prerequisites
 
 - Jetson Thor with JetPack 7.0, CUDA 13.0, Python 3.12
-- A working `~/workspace/realtimevoicechat/` project with a functional venv (for Parakeet and Qwen3-ASR)
-- SSH access as user `bujosa`
+- A working `~/workspace/voice-chat/` project with a functional venv (for Parakeet and Qwen3-ASR)
+- SSH access to the Jetson
 
 ## Important Notes
 
@@ -18,41 +18,41 @@ Step-by-step commands for deploying all three voice models on Jetson Thor (10.0.
 
 ## 1. Parakeet-TDT 0.6B v3 (port 8004)
 
-Uses RealtimeVoiceChat with a custom adapter. Runtime: NeMo.
+Uses the voice-chat framework with a custom adapter. Runtime: NeMo.
 
 ```bash
-# 1. Copy the base RealtimeVoiceChat project
-cp -r ~/workspace/realtimevoicechat ~/workspace/realtimevoicechat-parakeet
+# 1. Copy the base voice-chat project
+cp -r ~/workspace/voice-chat ~/workspace/voice-chat-parakeet
 
 # 2. Copy the working venv (do NOT create fresh — native libs will be missing)
-cp -a ~/workspace/realtimevoicechat/venv ~/workspace/realtimevoicechat-parakeet/venv
+cp -a ~/workspace/voice-chat/venv ~/workspace/voice-chat-parakeet/venv
 
 # 3. Fix shebangs (CRITICAL — without this, pip installs to the WRONG venv)
-grep -rl "realtimevoicechat/venv/bin/python" ~/workspace/realtimevoicechat-parakeet/venv/bin/ | \
-  xargs -I{} sed -i "1s|realtimevoicechat/venv|realtimevoicechat-parakeet/venv|" {}
+grep -rl "voice-chat/venv/bin/python" ~/workspace/voice-chat-parakeet/venv/bin/ | \
+  xargs -I{} sed -i "1s|voice-chat/venv|voice-chat-parakeet/venv|" {}
 
 # 4. Verify shebangs are correct
-head -1 ~/workspace/realtimevoicechat-parakeet/venv/bin/pip
-# Should show: #!/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin/python3
+head -1 ~/workspace/voice-chat-parakeet/venv/bin/pip
+# Should show: #!/home/<your-user>/workspace/voice-chat-parakeet/venv/bin/python3
 
 # 5. Install NeMo (Parakeet's runtime)
-~/workspace/realtimevoicechat-parakeet/venv/bin/pip install nemo-toolkit[asr]
+~/workspace/voice-chat-parakeet/venv/bin/pip install nemo-toolkit[asr]
 
 # 6. Verify it installed in the RIGHT venv
-~/workspace/realtimevoicechat-parakeet/venv/bin/pip show nemo-toolkit | grep Location
-# Must show: /home/bujosa/workspace/realtimevoicechat-parakeet/venv/lib/...
+~/workspace/voice-chat-parakeet/venv/bin/pip show nemo-toolkit | grep Location
+# Must show: /home/<your-user>/workspace/voice-chat-parakeet/venv/lib/...
 
 # 7. Fix cuBLAS symlinks (NeMo pulls nvidia-cublas which breaks JetPack)
-VENV_NVIDIA=~/workspace/realtimevoicechat-parakeet/venv/lib/python3.12/site-packages/nvidia
+VENV_NVIDIA=~/workspace/voice-chat-parakeet/venv/lib/python3.12/site-packages/nvidia
 SYSTEM_CUBLAS=/usr/local/cuda/lib64
 ln -sf $SYSTEM_CUBLAS/libcublas.so.13 $VENV_NVIDIA/cublas/lib/libcublas.so.13
 ln -sf $SYSTEM_CUBLAS/libcublasLt.so.13 $VENV_NVIDIA/cublas/lib/libcublasLt.so.13
 
 # 8. Place adapter files in code/
-# Copy parakeet_adapter/ directory into ~/workspace/realtimevoicechat-parakeet/code/
+# Copy parakeet_adapter/ directory into ~/workspace/voice-chat-parakeet/code/
 
 # 9. Edit server.py — change port to 8004
-sed -i 's/port=8000/port=8004/' ~/workspace/realtimevoicechat-parakeet/code/server.py
+sed -i 's/port=8000/port=8004/' ~/workspace/voice-chat-parakeet/code/server.py
 
 # 10. Edit transcribe.py — add USE_PARAKEET conditional import at the top (after existing imports)
 # Add:
@@ -69,11 +69,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=bujosa
-WorkingDirectory=/home/bujosa/workspace/realtimevoicechat-parakeet/code
-Environment=PATH=/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin:/usr/local/bin:/usr/bin
+User=<your-user>
+WorkingDirectory=/home/<your-user>/workspace/voice-chat-parakeet/code
+Environment=PATH=/home/<your-user>/workspace/voice-chat-parakeet/venv/bin:/usr/local/bin:/usr/bin
 Environment=USE_PARAKEET=1
-ExecStart=/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin/python3 server.py
+ExecStart=/home/<your-user>/workspace/voice-chat-parakeet/venv/bin/python3 server.py
 Restart=on-failure
 RestartSec=10
 
@@ -94,33 +94,33 @@ sudo journalctl -u parakeet-voice -f
 
 ## 2. Qwen3-ASR 1.7B (port 8005)
 
-Uses RealtimeVoiceChat with a custom adapter. Runtime: qwen-asr (transformers).
+Uses the voice-chat framework with a custom adapter. Runtime: qwen-asr (transformers).
 
 ```bash
 # 1. Copy the base project
-cp -r ~/workspace/realtimevoicechat ~/workspace/realtimevoicechat-qwen3asr
+cp -r ~/workspace/voice-chat ~/workspace/voice-chat-qwen3asr
 
 # 2. Copy the working venv
-cp -a ~/workspace/realtimevoicechat/venv ~/workspace/realtimevoicechat-qwen3asr/venv
+cp -a ~/workspace/voice-chat/venv ~/workspace/voice-chat-qwen3asr/venv
 
 # 3. Fix shebangs (CRITICAL)
-grep -rl "realtimevoicechat/venv/bin/python" ~/workspace/realtimevoicechat-qwen3asr/venv/bin/ | \
-  xargs -I{} sed -i "1s|realtimevoicechat/venv|realtimevoicechat-qwen3asr/venv|" {}
+grep -rl "voice-chat/venv/bin/python" ~/workspace/voice-chat-qwen3asr/venv/bin/ | \
+  xargs -I{} sed -i "1s|voice-chat/venv|voice-chat-qwen3asr/venv|" {}
 
 # 4. Verify
-head -1 ~/workspace/realtimevoicechat-qwen3asr/venv/bin/pip
+head -1 ~/workspace/voice-chat-qwen3asr/venv/bin/pip
 
 # 5. Install qwen-asr
-~/workspace/realtimevoicechat-qwen3asr/venv/bin/pip install qwen-asr
+~/workspace/voice-chat-qwen3asr/venv/bin/pip install qwen-asr
 
 # 6. Verify installation location
-~/workspace/realtimevoicechat-qwen3asr/venv/bin/pip show qwen-asr | grep Location
+~/workspace/voice-chat-qwen3asr/venv/bin/pip show qwen-asr | grep Location
 
 # 7. Place adapter files in code/
-# Copy qwen3_asr_adapter/ directory into ~/workspace/realtimevoicechat-qwen3asr/code/
+# Copy qwen3_asr_adapter/ directory into ~/workspace/voice-chat-qwen3asr/code/
 
 # 8. Edit server.py — change port to 8005
-sed -i 's/port=8000/port=8005/' ~/workspace/realtimevoicechat-qwen3asr/code/server.py
+sed -i 's/port=8000/port=8005/' ~/workspace/voice-chat-qwen3asr/code/server.py
 
 # 9. Edit transcribe.py — add USE_QWEN3ASR conditional import
 # Add:
@@ -137,11 +137,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=bujosa
-WorkingDirectory=/home/bujosa/workspace/realtimevoicechat-qwen3asr/code
-Environment=PATH=/home/bujosa/workspace/realtimevoicechat-qwen3asr/venv/bin:/usr/local/bin:/usr/bin
+User=<your-user>
+WorkingDirectory=/home/<your-user>/workspace/voice-chat-qwen3asr/code
+Environment=PATH=/home/<your-user>/workspace/voice-chat-qwen3asr/venv/bin:/usr/local/bin:/usr/bin
 Environment=USE_QWEN3ASR=1
-ExecStart=/home/bujosa/workspace/realtimevoicechat-qwen3asr/venv/bin/python3 server.py
+ExecStart=/home/<your-user>/workspace/voice-chat-qwen3asr/venv/bin/python3 server.py
 Restart=on-failure
 RestartSec=10
 
@@ -162,7 +162,7 @@ sudo journalctl -u qwen3asr-voice -f
 
 ## 3. Qwen3-Omni 30B-A3B (port 8006)
 
-This one does **NOT** use RealtimeVoiceChat. It has its own standalone FastAPI server because the WebSocket protocol is incompatible.
+This one does **NOT** use the voice-chat framework. It has its own standalone FastAPI server because the WebSocket protocol is incompatible.
 
 ```bash
 # 1. Create project directory
@@ -198,10 +198,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=bujosa
-WorkingDirectory=/home/bujosa/workspace/qwen3-omni-voice/code
-Environment=PATH=/home/bujosa/workspace/qwen3-omni-voice/venv/bin:/usr/local/bin:/usr/bin
-ExecStart=/home/bujosa/workspace/qwen3-omni-voice/venv/bin/python3 server.py
+User=<your-user>
+WorkingDirectory=/home/<your-user>/workspace/qwen3-omni-voice/code
+Environment=PATH=/home/<your-user>/workspace/qwen3-omni-voice/venv/bin:/usr/local/bin:/usr/bin
+ExecStart=/home/<your-user>/workspace/qwen3-omni-voice/venv/bin/python3 server.py
 Restart=on-failure
 RestartSec=10
 
@@ -226,28 +226,28 @@ sudo journalctl -u qwen3omni-voice -f
 
 ## 4. DNS and HTTPS Setup
 
-Required for accessing the services via `*.home` domains with HTTPS from the local network.
+Required for accessing the services via local domains with HTTPS from the local network.
 
-### DNS entries (Pi-hole on 10.0.0.17)
+### DNS entries (Local DNS Server)
 
 ```bash
-# 1. Add DNS entries in Pi-hole (on pi / 10.0.0.17)
-# Edit /etc/pihole/pihole.toml, add to the custom_list array:
-#   "10.0.0.17 parakeet.home",
-#   "10.0.0.17 qwen3-asr.home",
-#   "10.0.0.17 qwen3-omni.home"
-# Then: pihole restartdns
+# 1. Add DNS entries in your local DNS server (e.g., Pi-hole, dnsmasq, etc.)
+# Point each domain to the IP of your reverse proxy server:
+#   <proxy-ip> parakeet.local
+#   <proxy-ip> qwen3-asr.local
+#   <proxy-ip> qwen3-omni.local
+# Then restart DNS (e.g., pihole restartdns)
 ```
 
-### HTTPS certificates (on Mac with mkcert)
+### HTTPS certificates (with mkcert)
 
 ```bash
 # 2. Generate HTTPS certs
-mkcert parakeet.home
-mkcert qwen3-asr.home
-mkcert qwen3-omni.home
+mkcert parakeet.local
+mkcert qwen3-asr.local
+mkcert qwen3-omni.local
 
-# 3. Upload certs to NPM (Nginx Proxy Manager on Pi)
+# 3. Upload certs to NPM (Nginx Proxy Manager)
 # Place fullchain.pem + privkey.pem in NPM's /data/custom_ssl/npm-{N}/
 ```
 
@@ -257,7 +257,7 @@ mkcert qwen3-omni.home
 # 4. Create NPM proxy host configs
 # NOTE: NPM has a bug where API-created hosts don't generate nginx configs.
 # You must manually create config files in /data/nginx/proxy_host/
-# Each config proxies HTTPS → http://10.0.0.11:<port> with WebSocket support
+# Each config proxies HTTPS → http://<jetson-ip>:<port> with WebSocket support
 ```
 
 ---
@@ -266,8 +266,8 @@ mkcert qwen3-omni.home
 
 | Port | Model | Service Name | Type |
 |------|-------|-------------|------|
-| 8004 | Parakeet-TDT 0.6B v3 | parakeet-voice | RealtimeVoiceChat + adapter |
-| 8005 | Qwen3-ASR 1.7B | qwen3asr-voice | RealtimeVoiceChat + adapter |
+| 8004 | Parakeet-TDT 0.6B v3 | parakeet-voice | voice-chat + adapter |
+| 8005 | Qwen3-ASR 1.7B | qwen3asr-voice | voice-chat + adapter |
 | 8006 | Qwen3-Omni 30B-A3B | qwen3omni-voice | Standalone FastAPI |
 
 ## Service Management

@@ -2,7 +2,7 @@
 
 ## Concept
 
-RealtimeVoiceChat uses `AudioToTextRecorder` from RealtimeSTT (based on Whisper). To use other STT engines without rewriting the entire framework, we created drop-in adapters that implement the same interface.
+The voice-chat framework uses `AudioToTextRecorder` from RealtimeSTT (based on Whisper). To use other STT engines without rewriting the entire framework, we created drop-in adapters that implement the same interface.
 
 ## Required Interface
 

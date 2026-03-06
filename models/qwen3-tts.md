@@ -37,7 +37,7 @@
 - `transformers==4.57.3` pin — may conflict with Qwen3-ASR (4.57.6)
 - FlashAttention on aarch64 requires manual compilation
 - Only 3 "tier 1" languages (ZH, EN, JA) — the rest have less training data
-- Not yet tested on Thor (pending deployment)
+- Not yet tested on Jetson Thor (pending deployment)
 
 ## Comparison vs Kokoro (current TTS)
 
@@ -76,4 +76,4 @@ wavs, sr = model.generate_voice_clone(
 
 ## Verdict
 
-Natural replacement for Kokoro when multilingual support or voice cloning is needed. Pending integration with the RealtimeVoiceChat pipeline.
+Natural replacement for Kokoro when multilingual support or voice cloning is needed. Pending integration with the voice-chat pipeline.

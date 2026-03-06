@@ -1,4 +1,4 @@
-# Services on Thor (10.0.0.11)
+# Services on Jetson Thor
 
 ## Current Status
 
@@ -24,7 +24,7 @@
 | Qwen3-Omni | ~27 GB | ~50 GB (mmap) |
 | Ollama gemma3:4b | ~5 GB | ~4 GB |
 
-**Thor total:** 122 GB unified RAM
+**Jetson Thor total:** 122 GB unified RAM
 
 ## Useful Commands
 
@@ -44,12 +44,12 @@ sudo journalctl -u parakeet-voice -f
 free -h
 ```
 
-## DNS (Pi-hole on 10.0.0.17)
+## DNS (Local DNS Server)
 
-All `.home` domains point to 10.0.0.17 (Pi) where NPM handles reverse proxy to Thor (10.0.0.11).
+All local domains point to the DNS/proxy server where NPM handles reverse proxy to Jetson Thor.
 
-## HTTPS (NPM on Pi)
+## HTTPS (NPM on Proxy Server)
 
-Certificates generated with `mkcert` on Mac. Root CA already trusted in macOS keychain.
+Certificates generated with `mkcert` on a development machine. Root CA already trusted in the system keychain.
 
 **Known bug:** NPM API creates DB entries for proxy hosts but does not generate nginx configs automatically. Workaround: create configs manually in `/data/nginx/proxy_host/`.

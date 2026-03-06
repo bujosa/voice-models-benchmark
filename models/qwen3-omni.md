@@ -11,7 +11,7 @@
 | Talker (speech synthesis) | 3B total, 0.3B active |
 | VRAM (BF16) | ~70 GB |
 | VRAM (AWQ-8bit) | ~35 GB |
-| First packet latency | 234ms (datacenter), ~500-1000ms (Thor estimated) |
+| First packet latency | 234ms (datacenter), ~500-1000ms (Jetson Thor estimated) |
 | Voice input languages | 19 |
 | Voice output languages | 10 (EN, ES, FR, DE, RU, IT, PT, JA, KO, ZH) |
 | Voices | Ethan, Chelsie, Aiden |
@@ -33,17 +33,17 @@ AFTER:   Qwen3-Omni                                (1 model, ~70 GB)
 - Better WER than GPT-4o-Transcribe on LibriSpeech (1.7%)
 - Competitive reasoning with Qwen3-30B text-only
 - 19 input languages including ES
-- Loaded in just 26 seconds on Thor (memory-mapped)
+- Loaded in just 26 seconds on Jetson Thor (memory-mapped)
 - With AWQ-8bit it would fit comfortably leaving RAM for other services
 - Multimodal model: also accepts images and video
 
 ## Disadvantages
 
-- **70 GB in BF16** — takes up more than half of Thor's RAM
+- **70 GB in BF16** — takes up more than half of Jetson Thor's RAM
 - **Only 3 predefined voices** — no voice cloning
 - **Audio cannot be streamed yet** — it is generated completely before being returned
-- Estimated latency on Thor: 500ms-1000ms per response (slower than cascaded pipeline)
-- WebSocket protocol incompatible with RealtimeVoiceChat — needs its own server
+- Estimated latency on Jetson Thor: 500ms-1000ms per response (slower than cascaded pipeline)
+- WebSocket protocol incompatible with voice-chat — needs its own server
 - Batch inference only for audio (no batching for multiple users)
 - `disable_talker()` saves ~10 GB if you only want STT+text
 - Quantized variants (AWQ-4bit/8bit) are community-made, not official
@@ -52,7 +52,7 @@ AFTER:   Qwen3-Omni                                (1 model, ~70 GB)
 
 1. **Massive download** — ~52 GB including all safetensors + codec + Talker. Took 31 minutes
 2. **accelerate warning** — "Some parameters are on the meta device because they were offloaded to cpu" — works but indicates part of the model is on CPU
-3. **Custom server needed** — The RealtimeVoiceChat WebSocket protocol is not compatible. A dedicated FastAPI server must be written
+3. **Custom server needed** — The voice-chat WebSocket protocol is not compatible. A dedicated FastAPI server must be written
 4. **NPM config generation bug** — Proxy hosts created via API did not generate nginx configs automatically. They had to be created manually
 
 ## Configuration
@@ -88,7 +88,7 @@ text_ids, audio = model.generate(
 
 ## Installation on Jetson Thor
 
-Qwen3-Omni does **NOT** use RealtimeVoiceChat. It has its own standalone FastAPI server on port **8006** because the WebSocket protocol is incompatible.
+Qwen3-Omni does **NOT** use voice-chat. It has its own standalone FastAPI server on port **8006** because the WebSocket protocol is incompatible.
 
 ```bash
 # 1. Create project directory
@@ -124,10 +124,10 @@ After=network.target
 
 [Service]
 Type=simple
-User=bujosa
-WorkingDirectory=/home/bujosa/workspace/qwen3-omni-voice/code
-Environment=PATH=/home/bujosa/workspace/qwen3-omni-voice/venv/bin:/usr/local/bin:/usr/bin
-ExecStart=/home/bujosa/workspace/qwen3-omni-voice/venv/bin/python3 server.py
+User=<your-user>
+WorkingDirectory=/home/<your-user>/workspace/qwen3-omni-voice/code
+Environment=PATH=/home/<your-user>/workspace/qwen3-omni-voice/venv/bin:/usr/local/bin:/usr/bin
+ExecStart=/home/<your-user>/workspace/qwen3-omni-voice/venv/bin/python3 server.py
 Restart=on-failure
 RestartSec=10
 
@@ -150,4 +150,4 @@ sudo journalctl -u qwen3omni-voice -f
 
 ## Verdict
 
-The future of voice assistants. A single model that listens, thinks, and speaks. It fits on Thor in BF16 but consumes a lot of RAM. Ideal for a dedicated assistant where quality matters more than running multiple services in parallel. With AWQ-8bit it would be more practical for daily use.
+The future of voice assistants. A single model that listens, thinks, and speaks. It fits on Jetson Thor in BF16 but consumes a lot of RAM. Ideal for a dedicated assistant where quality matters more than running multiple services in parallel. With AWQ-8bit it would be more practical for daily use.

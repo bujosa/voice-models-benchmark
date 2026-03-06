@@ -21,7 +21,7 @@
 - Automatic punctuation and capitalization
 - Word-level timestamps
 - Supports long audio (up to 3 hours with local attention)
-- Model loaded in 78s on Thor
+- Model loaded in 78s on Jetson Thor
 
 ## Disadvantages
 
@@ -49,41 +49,41 @@ text = output[0].text
 
 ## Installation on Jetson Thor
 
-Parakeet runs as a RealtimeVoiceChat instance on port **8004**. The venv is cloned from the base project to preserve native Jetson libs.
+Parakeet runs as a voice-chat instance on port **8004**. The venv is cloned from the base project to preserve native Jetson libs.
 
 ```bash
-# 1. Copy the base RealtimeVoiceChat project
-cp -r ~/workspace/realtimevoicechat ~/workspace/realtimevoicechat-parakeet
+# 1. Copy the base voice-chat project
+cp -r ~/workspace/voice-chat ~/workspace/voice-chat-parakeet
 
 # 2. Copy the working venv (do NOT create fresh — native libs will be missing)
-cp -a ~/workspace/realtimevoicechat/venv ~/workspace/realtimevoicechat-parakeet/venv
+cp -a ~/workspace/voice-chat/venv ~/workspace/voice-chat-parakeet/venv
 
 # 3. Fix shebangs (CRITICAL — without this, pip installs to the WRONG venv)
-grep -rl "realtimevoicechat/venv/bin/python" ~/workspace/realtimevoicechat-parakeet/venv/bin/ | \
-  xargs -I{} sed -i "1s|realtimevoicechat/venv|realtimevoicechat-parakeet/venv|" {}
+grep -rl "voice-chat/venv/bin/python" ~/workspace/voice-chat-parakeet/venv/bin/ | \
+  xargs -I{} sed -i "1s|voice-chat/venv|voice-chat-parakeet/venv|" {}
 
 # 4. Verify shebangs are correct
-head -1 ~/workspace/realtimevoicechat-parakeet/venv/bin/pip
-# Should show: #!/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin/python3
+head -1 ~/workspace/voice-chat-parakeet/venv/bin/pip
+# Should show: #!/home/<your-user>/workspace/voice-chat-parakeet/venv/bin/python3
 
 # 5. Install NeMo (Parakeet's runtime)
-~/workspace/realtimevoicechat-parakeet/venv/bin/pip install nemo-toolkit[asr]
+~/workspace/voice-chat-parakeet/venv/bin/pip install nemo-toolkit[asr]
 
 # 6. Verify it installed in the RIGHT venv
-~/workspace/realtimevoicechat-parakeet/venv/bin/pip show nemo-toolkit | grep Location
-# Must show: /home/bujosa/workspace/realtimevoicechat-parakeet/venv/lib/...
+~/workspace/voice-chat-parakeet/venv/bin/pip show nemo-toolkit | grep Location
+# Must show: /home/<your-user>/workspace/voice-chat-parakeet/venv/lib/...
 
 # 7. Fix cuBLAS symlinks (NeMo pulls nvidia-cublas which breaks JetPack)
-VENV_NVIDIA=~/workspace/realtimevoicechat-parakeet/venv/lib/python3.12/site-packages/nvidia
+VENV_NVIDIA=~/workspace/voice-chat-parakeet/venv/lib/python3.12/site-packages/nvidia
 SYSTEM_CUBLAS=/usr/local/cuda/lib64
 ln -sf $SYSTEM_CUBLAS/libcublas.so.13 $VENV_NVIDIA/cublas/lib/libcublas.so.13
 ln -sf $SYSTEM_CUBLAS/libcublasLt.so.13 $VENV_NVIDIA/cublas/lib/libcublasLt.so.13
 
 # 8. Place adapter files in code/
-# Copy parakeet_adapter/ directory into ~/workspace/realtimevoicechat-parakeet/code/
+# Copy parakeet_adapter/ directory into ~/workspace/voice-chat-parakeet/code/
 
 # 9. Edit server.py — change port to 8004
-sed -i 's/port=8000/port=8004/' ~/workspace/realtimevoicechat-parakeet/code/server.py
+sed -i 's/port=8000/port=8004/' ~/workspace/voice-chat-parakeet/code/server.py
 
 # 10. Edit transcribe.py — add USE_PARAKEET conditional import at the top (after existing imports)
 # Add:
@@ -100,11 +100,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=bujosa
-WorkingDirectory=/home/bujosa/workspace/realtimevoicechat-parakeet/code
-Environment=PATH=/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin:/usr/local/bin:/usr/bin
+User=<your-user>
+WorkingDirectory=/home/<your-user>/workspace/voice-chat-parakeet/code
+Environment=PATH=/home/<your-user>/workspace/voice-chat-parakeet/venv/bin:/usr/local/bin:/usr/bin
 Environment=USE_PARAKEET=1
-ExecStart=/home/bujosa/workspace/realtimevoicechat-parakeet/venv/bin/python3 server.py
+ExecStart=/home/<your-user>/workspace/voice-chat-parakeet/venv/bin/python3 server.py
 Restart=on-failure
 RestartSec=10
 

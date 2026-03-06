@@ -22,7 +22,7 @@
 - Word-level timestamps with a separate ForcedAligner
 - Handles code-switching (EN/ES mixing in the same sentence)
 - Recognizes singing and audio with background music
-- 1.7B loaded in 126s on Thor
+- 1.7B loaded in 126s on Jetson Thor
 
 ## Disadvantages
 
@@ -63,33 +63,33 @@ lang = results[0].language
 
 ## Installation on Jetson Thor
 
-Qwen3-ASR runs as a RealtimeVoiceChat instance on port **8005**. The venv is cloned from the base project to preserve native Jetson libs.
+Qwen3-ASR runs as a voice-chat instance on port **8005**. The venv is cloned from the base project to preserve native Jetson libs.
 
 ```bash
 # 1. Copy the base project
-cp -r ~/workspace/realtimevoicechat ~/workspace/realtimevoicechat-qwen3asr
+cp -r ~/workspace/voice-chat ~/workspace/voice-chat-qwen3asr
 
 # 2. Copy the working venv
-cp -a ~/workspace/realtimevoicechat/venv ~/workspace/realtimevoicechat-qwen3asr/venv
+cp -a ~/workspace/voice-chat/venv ~/workspace/voice-chat-qwen3asr/venv
 
 # 3. Fix shebangs (CRITICAL)
-grep -rl "realtimevoicechat/venv/bin/python" ~/workspace/realtimevoicechat-qwen3asr/venv/bin/ | \
-  xargs -I{} sed -i "1s|realtimevoicechat/venv|realtimevoicechat-qwen3asr/venv|" {}
+grep -rl "voice-chat/venv/bin/python" ~/workspace/voice-chat-qwen3asr/venv/bin/ | \
+  xargs -I{} sed -i "1s|voice-chat/venv|voice-chat-qwen3asr/venv|" {}
 
 # 4. Verify
-head -1 ~/workspace/realtimevoicechat-qwen3asr/venv/bin/pip
+head -1 ~/workspace/voice-chat-qwen3asr/venv/bin/pip
 
 # 5. Install qwen-asr
-~/workspace/realtimevoicechat-qwen3asr/venv/bin/pip install qwen-asr
+~/workspace/voice-chat-qwen3asr/venv/bin/pip install qwen-asr
 
 # 6. Verify installation location
-~/workspace/realtimevoicechat-qwen3asr/venv/bin/pip show qwen-asr | grep Location
+~/workspace/voice-chat-qwen3asr/venv/bin/pip show qwen-asr | grep Location
 
 # 7. Place adapter files in code/
-# Copy qwen3_asr_adapter/ directory into ~/workspace/realtimevoicechat-qwen3asr/code/
+# Copy qwen3_asr_adapter/ directory into ~/workspace/voice-chat-qwen3asr/code/
 
 # 8. Edit server.py — change port to 8005
-sed -i 's/port=8000/port=8005/' ~/workspace/realtimevoicechat-qwen3asr/code/server.py
+sed -i 's/port=8000/port=8005/' ~/workspace/voice-chat-qwen3asr/code/server.py
 
 # 9. Edit transcribe.py — add USE_QWEN3ASR conditional import
 # Add:
@@ -106,11 +106,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=bujosa
-WorkingDirectory=/home/bujosa/workspace/realtimevoicechat-qwen3asr/code
-Environment=PATH=/home/bujosa/workspace/realtimevoicechat-qwen3asr/venv/bin:/usr/local/bin:/usr/bin
+User=<your-user>
+WorkingDirectory=/home/<your-user>/workspace/voice-chat-qwen3asr/code
+Environment=PATH=/home/<your-user>/workspace/voice-chat-qwen3asr/venv/bin:/usr/local/bin:/usr/bin
 Environment=USE_QWEN3ASR=1
-ExecStart=/home/bujosa/workspace/realtimevoicechat-qwen3asr/venv/bin/python3 server.py
+ExecStart=/home/<your-user>/workspace/voice-chat-qwen3asr/venv/bin/python3 server.py
 Restart=on-failure
 RestartSec=10
 
@@ -129,4 +129,4 @@ sudo journalctl -u qwen3asr-voice -f
 
 ## Verdict
 
-Best accuracy available in open-source. Use 1.7B on hardware with enough VRAM (4GB+). For Thor it is the obvious choice vs the 0.6B.
+Best accuracy available in open-source. Use 1.7B on hardware with enough VRAM (4GB+). For Jetson Thor it is the obvious choice vs the 0.6B.

@@ -25,7 +25,7 @@
 - Constantly consumes CPU during VAD + transcription
 - High beam_size (3) worsens latency without significantly improving accuracy
 
-## Optimal Configuration (tested on Thor)
+## Optimal Configuration (tested on Jetson Thor)
 
 ```python
 "model": "small",              # Do NOT use base.en for multilingual

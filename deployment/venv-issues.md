@@ -2,7 +2,7 @@
 
 ## The Main Problem
 
-Thor uses JetPack 7.0 with CUDA 13.0 on aarch64. PyTorch comes from the special index `pypi.jetson-ai-lab.io/sbsa/cu130`. The wheels include native NVIDIA libs that are not on the system.
+Jetson Thor uses JetPack 7.0 with CUDA 13.0 on aarch64. PyTorch comes from the special index `pypi.jetson-ai-lab.io/sbsa/cu130`. The wheels include native NVIDIA libs that are not on the system.
 
 ## Issue 1: Venv Copied with `cp -a`
 
@@ -13,7 +13,7 @@ cp -a ~/workspace/project-a/venv ~/workspace/project-b/venv
 
 **Problem:** The shebangs of `bin/pip`, `bin/pip3`, etc. still point to the original path:
 ```
-#!/home/bujosa/workspace/project-a/venv/bin/python3
+#!/home/<your-user>/workspace/project-a/venv/bin/python3
 ```
 
 **Consequence:** `pip install` installs packages in the original venv, not the new one.
@@ -73,7 +73,7 @@ grep -rl "working-project/venv/bin/python" ~/workspace/new-project/venv/bin/ | \
 
 # 3. Verify
 ~/workspace/new-project/venv/bin/pip show torch | grep Location
-# Should show: /home/bujosa/workspace/new-project/venv/lib/...
+# Should show: /home/<your-user>/workspace/new-project/venv/lib/...
 
 # 4. Install additional dependencies
 ~/workspace/new-project/venv/bin/pip install <new-package>
